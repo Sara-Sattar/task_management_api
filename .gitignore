@@ -1,0 +1,73 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.pytest_cache/
+
+# Type checkers / linters
+.mypy_cache/
+.pytype/
+.ruff_cache/
+
+# Packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+
+# Environments
+.venv/
+venv/
+ENV/
+
+# pyenv / asdf
+.python-version
+
+# --- Django ---
+# SQLite databases
+*.sqlite3
+/db.sqlite3
+
+# Collected static and user uploads
+staticfiles/
+static/collected/
+media/
+
+# Local settings & env files
+.env
+.env.*
+*.env
+
+# Logs
+*.log
+logs/
+
+# IDE/editor files
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Other
+.svn/
+**/.DS_Store
