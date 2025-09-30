@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'users',
+    'tasks',
 ]
 
 MIDDLEWARE = [
@@ -133,5 +134,5 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Custom user model
+
 AUTH_USER_MODEL = 'users.User'
