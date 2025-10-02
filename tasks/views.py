@@ -6,11 +6,6 @@ from rest_framework.response import Response
 from django.utils import timezone
 from .models import Task
 from .serializers import TaskSerializer
-
-
-# Create your views here.
-
-
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
@@ -23,13 +18,13 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         instance = self.get_object()
-        # Prevent editing if task is completed and request does not revert to Pending
+       
         new_status = self.request.data.get('status')
         is_reverting = new_status == 'Pending'
         if instance.status == 'Completed' and not is_reverting:
             return Response({'detail': 'Task is completed. Revert to Pending before editing.'}, status=status.HTTP_400_BAD_REQUEST)
         updated_instance = serializer.save()
-        # Maintain completed_at consistency on normal updates
+       
         if new_status == 'Completed' and updated_instance.completed_at is None:
             updated_instance.completed_at = timezone.now()
             updated_instance.save(update_fields=['completed_at'])
@@ -40,7 +35,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'], url_path='complete')
     def complete(self, request, pk=None):
         task = self.get_object()
-        # Toggle completion based on payload {"completed": true/false}
+
         completed = request.data.get('completed')
         if completed is None:
             return Response({'detail': 'Field "completed" is required (true/false).'}, status=status.HTTP_400_BAD_REQUEST)
