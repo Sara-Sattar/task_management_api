@@ -35,6 +35,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'], url_path='complete')
     def complete(self, request, pk=None):
         task = self.get_object()
+        # Block editing when task is completed
 
         completed = request.data.get('completed')
         if completed is None:
