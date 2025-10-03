@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from .models import Task
 from .serializers import TaskSerializer
+from datetime import datetime, date
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
@@ -13,8 +14,33 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_staff:
-            return Task.objects.all()
-        return Task.objects.filter(user=self.request.user)
+            base_qs = Task.objects.all()
+        else:
+            base_qs = Task.objects.filter(user=self.request.user)
+
+        params = self.request.query_params
+        status_param = params.get('status')
+        priority_param = params.get('priority')
+        due_param = params.get('due_date')
+
+        if status_param:
+            base_qs = base_qs.filter(status=status_param)
+        if priority_param:
+            base_qs = base_qs.filter(priority=priority_param)
+        if due_param:
+            parsed = None
+            try:
+                if len(due_param) <= 10:
+                    parsed_date = date.fromisoformat(due_param)
+                    base_qs = base_qs.filter(due_date__date=parsed_date)
+                else:
+                    iso_value = due_param.replace('Z', '+00:00')
+                    parsed = datetime.fromisoformat(iso_value)
+                    base_qs = base_qs.filter(due_date=parsed)
+            except Exception:
+                pass
+
+        return base_qs
 
     def perform_update(self, serializer):
         instance = self.get_object()
