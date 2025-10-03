@@ -40,7 +40,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
-        return base_qs
+        return base_qs.order_by('due_date')
 
     def perform_update(self, serializer):
         instance = self.get_object()
