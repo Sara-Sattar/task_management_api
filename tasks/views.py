@@ -7,6 +7,7 @@ from django.utils import timezone
 from .models import Task
 from .serializers import TaskSerializer
 from datetime import datetime, date
+from django.db.models import Case, When, Value, IntegerField
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
@@ -40,7 +41,15 @@ class TaskViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
-        return base_qs.order_by('due_date')
+        # Order by due_date then priority (Low < Medium < High)
+        priority_order = Case(
+            When(priority='Low', then=Value(1)),
+            When(priority='Medium', then=Value(2)),
+            When(priority='High', then=Value(3)),
+            default=Value(99),
+            output_field=IntegerField(),
+        )
+        return base_qs.annotate(priority_order=priority_order).order_by('due_date', 'priority_order')
 
     def perform_update(self, serializer):
         instance = self.get_object()
