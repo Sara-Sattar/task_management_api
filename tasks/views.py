@@ -14,10 +14,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        if self.request.user.is_staff:
-            base_qs = Task.objects.all()
-        else:
-            base_qs = Task.objects.filter(user=self.request.user)
+        base_qs = Task.objects.filter(user=self.request.user)
 
         params = self.request.query_params
         status_param = params.get('status')
