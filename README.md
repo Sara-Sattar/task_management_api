@@ -1,5 +1,4 @@
 # Task Management API
-
 This is a simple **Task Management API** built with **Django REST Framework**, allowing users to manage their own tasks securely using **JWT authentication**.
 
 ## Features
