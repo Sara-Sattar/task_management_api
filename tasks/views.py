@@ -1,6 +1,4 @@
-from django.shortcuts import render
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
@@ -8,8 +6,8 @@ from .models import Task
 from .serializers import TaskSerializer
 from datetime import datetime, date
 from django.db.models import Case, When, Value, IntegerField
-class TaskViewSet(viewsets.ModelViewSet):
-    queryset = Task.objects.all()
+
+class TaskListCreateView(generics.ListCreateAPIView):
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated]
 
@@ -26,7 +24,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         if priority_param:
             base_qs = base_qs.filter(priority=priority_param)
         if due_param:
-            parsed = None
             try:
                 if len(due_param) <= 10:
                     parsed_date = date.fromisoformat(due_param)
@@ -38,7 +35,6 @@ class TaskViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
-        # Order by due_date then priority (Low < Medium < High)
         priority_order = Case(
             When(priority='Low', then=Value(1)),
             When(priority='Medium', then=Value(2)),
@@ -48,15 +44,23 @@ class TaskViewSet(viewsets.ModelViewSet):
         )
         return base_qs.annotate(priority_order=priority_order).order_by('due_date', 'priority_order')
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class TaskRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Task.objects.filter(user=self.request.user)
+
     def perform_update(self, serializer):
         instance = self.get_object()
-       
         new_status = self.request.data.get('status')
         is_reverting = new_status == 'Pending'
         if instance.status == 'Completed' and not is_reverting:
             return Response({'detail': 'Task is completed. Revert to Pending before editing.'}, status=status.HTTP_400_BAD_REQUEST)
         updated_instance = serializer.save()
-       
         if new_status == 'Completed' and updated_instance.completed_at is None:
             updated_instance.completed_at = timezone.now()
             updated_instance.save(update_fields=['completed_at'])
@@ -64,11 +68,15 @@ class TaskViewSet(viewsets.ModelViewSet):
             updated_instance.completed_at = None
             updated_instance.save(update_fields=['completed_at'])
 
-    @action(detail=True, methods=['patch'], url_path='complete')
-    def complete(self, request, pk=None):
-        task = self.get_object()
-        # Editing when task is completed
+class TaskCompleteView(generics.UpdateAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        return Task.objects.filter(user=self.request.user)
+
+    def patch(self, request, *args, **kwargs):
+        task = self.get_object()
         completed = request.data.get('completed')
         if completed is None:
             return Response({'detail': 'Field "completed" is required (true/false).'}, status=status.HTTP_400_BAD_REQUEST)
