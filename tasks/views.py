@@ -42,6 +42,16 @@ class TaskListView(generics.ListAPIView):
             default=Value(99),
             output_field=IntegerField(),
         )
+
+        ordering = params.get('ordering')
+        if ordering:
+            key = ordering.lstrip('-')
+            direction = '-' if ordering.startswith('-') else ''
+            if key == 'priority':
+                return base_qs.annotate(priority_order=priority_order).order_by(f"{direction}priority_order", f"{direction}due_date")
+            if key == 'due_date':
+                return base_qs.annotate(priority_order=priority_order).order_by(f"{direction}due_date", f"{direction}priority_order")
+
         return base_qs.annotate(priority_order=priority_order).order_by('due_date', 'priority_order')
 
 class TaskCreateView(generics.CreateAPIView):
@@ -86,6 +96,16 @@ class TaskListCreateView(generics.ListCreateAPIView):
             default=Value(99),
             output_field=IntegerField(),
         )
+
+        ordering = params.get('ordering')
+        if ordering:
+            key = ordering.lstrip('-')
+            direction = '-' if ordering.startswith('-') else ''
+            if key == 'priority':
+                return base_qs.annotate(priority_order=priority_order).order_by(f"{direction}priority_order", f"{direction}due_date")
+            if key == 'due_date':
+                return base_qs.annotate(priority_order=priority_order).order_by(f"{direction}due_date", f"{direction}priority_order")
+
         return base_qs.annotate(priority_order=priority_order).order_by('due_date', 'priority_order')
 
     def perform_create(self, serializer):
