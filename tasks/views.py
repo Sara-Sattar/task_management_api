@@ -1,4 +1,4 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
@@ -6,6 +6,50 @@ from .models import Task
 from .serializers import TaskSerializer
 from datetime import datetime, date
 from django.db.models import Case, When, Value, IntegerField
+
+class TaskListView(generics.ListAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        base_qs = Task.objects.filter(user=self.request.user)
+
+        params = self.request.query_params
+        status_param = params.get('status')
+        priority_param = params.get('priority')
+        due_param = params.get('due_date')
+
+        if status_param:
+            base_qs = base_qs.filter(status=status_param)
+        if priority_param:
+            base_qs = base_qs.filter(priority=priority_param)
+        if due_param:
+            try:
+                if len(due_param) <= 10:
+                    parsed_date = date.fromisoformat(due_param)
+                    base_qs = base_qs.filter(due_date__date=parsed_date)
+                else:
+                    iso_value = due_param.replace('Z', '+00:00')
+                    parsed = datetime.fromisoformat(iso_value)
+                    base_qs = base_qs.filter(due_date=parsed)
+            except Exception:
+                pass
+
+        priority_order = Case(
+            When(priority='Low', then=Value(1)),
+            When(priority='Medium', then=Value(2)),
+            When(priority='High', then=Value(3)),
+            default=Value(99),
+            output_field=IntegerField(),
+        )
+        return base_qs.annotate(priority_order=priority_order).order_by('due_date', 'priority_order')
+
+class TaskCreateView(generics.CreateAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 class TaskListCreateView(generics.ListCreateAPIView):
     serializer_class = TaskSerializer
@@ -59,7 +103,7 @@ class TaskRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         new_status = self.request.data.get('status')
         is_reverting = new_status == 'Pending'
         if instance.status == 'Completed' and not is_reverting:
-            return Response({'detail': 'Task is completed. Revert to Pending before editing.'}, status=status.HTTP_400_BAD_REQUEST)
+            raise serializers.ValidationError({"detail": "Task is completed. Revert to Pending before editing."})
         updated_instance = serializer.save()
         if new_status == 'Completed' and updated_instance.completed_at is None:
             updated_instance.completed_at = timezone.now()
